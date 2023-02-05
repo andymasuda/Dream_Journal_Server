@@ -7,7 +7,6 @@ urlpatterns = [
     path('users/', views.UserListView.as_view()),
     path('users/<int:id>/', views.UserDetailView.as_view()),
     path('images/', views.DreamImagesView.as_view()),
+    path('images/<int:id>/', views.DreamImageDetailView.as_view()),
     path('login/', views.TokenView.as_view())
-
-    
 ]

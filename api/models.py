@@ -11,6 +11,6 @@ class Entry(models.Model):
     description = models.CharField(max_length=50)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    # created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     image_id = models.ForeignKey(DreamImage, on_delete=models.CASCADE)
 

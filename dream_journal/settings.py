@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 
+from config import USERNAME, PASSWORD, HOST, PORT
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -53,6 +54,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
+
 ]
 
 ROOT_URLCONF = 'dream_journal.urls'
@@ -79,7 +81,6 @@ WSGI_APPLICATION = 'dream_journal.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
-from config import USERNAME, PASSWORD, HOST, PORT
 
 DATABASES = {
     'default': {
@@ -143,3 +144,5 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     ]
 }
+
+CORS_ORIGIN_ALLOW_ALL = True

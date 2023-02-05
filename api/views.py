@@ -1,3 +1,5 @@
+import uuid
+from google.cloud import storage
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.views import Response
@@ -12,39 +14,50 @@ from .wombo_service import send_task_to_dream_api
 from rest_framework.authentication import TokenAuthentication, BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
+import json
 
 
 # Create your views here.
 
 
 class EntryListView(APIView):
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
+    authentication_classes = []
+    permission_classes = []
 
     def get(self, request):
-        
+
         queryset = Entry.objects.select_related('image_id')
         user_id = request.query_params.get("user_id")
 
-        if user_id: # user id
+        if user_id:  # user id
             queryset.filter(created_by=user_id)
-        
+
         serializer = EntrySerializer(queryset, many=True)
-        return Response(serializer.data)
+        print(serializer.data)
+
+        entries = serializer.data
+
+        for i in range(len(entries)):
+            entries[i]['id'] = str(entries[i]['id'])
+            entries[i]['image_id'] = str(entries[i]['image_id'])
+
+        return Response(entries)
 
     def post(self, request):
         # Create the image in the database
+
+        # image_id
         dream_image_data = {"url": request.data["url"]}
         serializer = DreamImageSerializer(data=dream_image_data)
 
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        serializer.save()
+        dream_image = serializer.save()
 
-        request.data['created_by'] = request.user.id
-
-        # Create the entry
         entry_data = request.data
+        entry_data['created_by'] = request.user.id
+        entry_data['image_id'] = dream_image.id
+        # Create the entry
         serializer = EntrySerializer(data=entry_data)
 
         if not serializer.is_valid():
@@ -58,6 +71,7 @@ class EntryListView(APIView):
 class EntryDetailView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
+
     def get(self, request, id):
         entry = Entry.objects.filter(id=id).first()
         serializer = EntrySerializer(entry)
@@ -67,19 +81,24 @@ class EntryDetailView(APIView):
 
     # def put(self, request):
 
-        
     #     return Response()
 
-class UserListView(APIView): # registration view
-    # authentication_classes = [TokenAuthentication]
-    # permission_classes = [IsAuthenticated]
+
+class UserListView(APIView):  # registration view
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         users = User.objects.all()
         serializer = UserSerializer(users, many=True)
 
         return Response(serializer.data)
+
     def post(self, request):
+        # print(request.data)
+        # data = json.loads(request.data)
+        # print(data)
+
         serializer = UserSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -96,23 +115,25 @@ class UserListView(APIView): # registration view
 
 
 class UserDetailView(APIView):
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
+    # authentication_classes = [TokenAuthentication]
+    authentication_classes = []
+    # permission_classes = [IsAuthenticated]
+    permission_classes = []
+
     def get(self, request, id):
         user = User.objects.filter(id=id).first()
         serializer = UserSerializer(user)
+        user_data = serializer.data
+        user_data['id'] = str(user_data['id'])
 
-        return Response(serializer.data)
+        return Response(user_data)
 
-
-
-from google.cloud import storage
-import uuid
 
 class DreamImagesView(APIView):
     """
     Creates a set of images based on a prompt, and returns nine images, and uploads to database
     """
+
     def post(self, request):
         prompt = request.data['prompt']
         if not prompt:
@@ -120,12 +141,10 @@ class DreamImagesView(APIView):
 
         DAYDREAM_STYLE = 39
 
-        # send_task_to_dream_api(DAYDREAM_STYLE, prompt)
+        send_task_to_dream_api(DAYDREAM_STYLE, prompt)
 
-        
-        
-
-        client = storage.Client.from_service_account_json(json_credentials_path='woven-nova-376821-f6f1803e9106.json')
+        client = storage.Client.from_service_account_json(
+            json_credentials_path='woven-nova-376821-f6f1803e9106.json')
 
         bucket = client.get_bucket('hackuci2023')
 
@@ -137,11 +156,15 @@ class DreamImagesView(APIView):
         return Response({"url": public_url})
 
 
-    def get(self, request):
+class DreamImageDetailView(APIView):
+    def get(self, request, id):
+        image = DreamImage.objects.filter(id=id).first()
+        serializer = DreamImageSerializer(image)
+        data = serializer.data
 
-        queryset = DreamImage.objects.all()
-        serializer = DreamImageSerializer(queryset, many=True)
-        return Response(serializer.data)
+        data['id'] = str(data['id'])
+
+        return Response(data)
 
 
 class TokenView(APIView):
@@ -154,4 +177,4 @@ class TokenView(APIView):
 
         token, created = Token.objects.get_or_create(user=request.user)
 
-        return Response({"token": token.key, 'user_id': request.user.id})
+        return Response({"token": token.key, 'user_id': str(request.user.id)})
